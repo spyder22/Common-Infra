@@ -1,6 +1,7 @@
 package com.example.authenticationapi.config;
 
 import com.example.authenticationapi.payloads.requests.LoginLogoutTimeStamp;
+import net.minidev.json.JSONObject;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,7 @@ import java.util.Map;
 public class ProducerConfiguration {
 
     @Bean
-    public ProducerFactory<String, LoginLogoutTimeStamp>
+    public ProducerFactory<String, JSONObject>
     producerFactory()
     {
 
@@ -45,7 +46,7 @@ public class ProducerConfiguration {
 
 
     @Bean
-    public KafkaTemplate<String, LoginLogoutTimeStamp> kafkaTemplate()
+    public KafkaTemplate<String, JSONObject> kafkaTemplate()
     {
         return new KafkaTemplate<>(
 

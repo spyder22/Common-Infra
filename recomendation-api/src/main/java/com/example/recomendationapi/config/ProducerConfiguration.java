@@ -29,7 +29,7 @@ public class ProducerConfiguration {
 
         config.put(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092");
+                "10.177.1.156:9092");
 
         config.put(
                 ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,

@@ -12,10 +12,21 @@ public class Customer {
 
     @Id
     private String userEmail;
+    private String password;
     private String name;
     private String contact;
+
     private Set<String> interests;
     private Set<String> appIds;
+
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
     public String getUserEmail() {
         return userEmail;

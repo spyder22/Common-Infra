@@ -14,7 +14,7 @@ public class InstaConsumerService {
     public static final String topic="orgg";
 
 
-    @KafkaListener(topics = "topp",groupId = "group2")
+    @KafkaListener(topics = "kishan",groupId = "group2")
     public void listenToOrganizationPost(OrganizationPost organizationPost)
     {
         System.out.println(organizationPost.getUrl());

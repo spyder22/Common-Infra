@@ -39,4 +39,13 @@ public class UpdateInterestRequest {
     public void setInterests(Set<String> interests) {
         this.interests = interests;
     }
+
+    @Override
+    public String toString() {
+        return "UpdateInterestRequest{" +
+                "userEmail='" + userEmail + '\'' +
+                ", appId='" + appId + '\'' +
+                ", interests=" + interests +
+                '}';
+    }
 }

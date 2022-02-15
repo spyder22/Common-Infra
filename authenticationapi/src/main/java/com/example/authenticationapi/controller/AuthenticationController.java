@@ -13,6 +13,7 @@ import com.example.authenticationapi.service.impl.AppsServiceImpl;
 import com.example.authenticationapi.service.impl.CustomerServiceImpl;
 import com.example.authenticationapi.service.impl.OriginServiceImpl;
 import com.example.authenticationapi.util.JwtUtil;
+import net.minidev.json.JSONObject;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +24,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import javax.xml.bind.DatatypeConverter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 @RestController
@@ -56,7 +58,8 @@ public class AuthenticationController {
 
 
     @Autowired
-    private KafkaTemplate<String, LoginLogoutTimeStamp> kafkaTemplate;
+    private KafkaTemplate<String, JSONObject> kafkaTemplate;
+
 
     public static final String topic="loginlogout";
 
@@ -66,54 +69,22 @@ public class AuthenticationController {
     @PostMapping(value = "/login" )
     public ResponseEntity<?> login(@RequestBody AuthenticationRequest authenticationRequest) throws Exception {
 
-        System.out.println("******************login***************");
         System.out.println(authenticationRequest);
 
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(authenticationRequest.getAppId()+authenticationRequest.getUserEmail(), authenticationRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(authenticationRequest.getUserEmail(), hashPassword(authenticationRequest.getPassword()))
             );
         }
         catch (BadCredentialsException e) {
-            throw new Exception("Incorrect username or password", e);
+//            throw new Exception("Incorrect username or password", e);
+            return ResponseEntity.ok(null);
         }
 
 
         String appId=authenticationRequest.getAppId();
-
-        UserDetails userDetails=null;
-
-        switch (appId)
-        {
-            case "1":
-                userDetails = myUserDetailService
-                        .loadUserByUsername("1"+authenticationRequest.getUserEmail());
-                break;
-
-            case "2":
-                System.out.println("22");
-                userDetails = myUserDetailService
-                        .loadUserByUsername("2"+authenticationRequest.getUserEmail());
-                break;
-
-            case "3":
-                userDetails = myUserDetailService
-                        .loadUserByUsername("3"+authenticationRequest.getUserEmail());
-                break;
-
-            case "4":
-                userDetails = myUserDetailService
-                        .loadUserByUsername("4"+authenticationRequest.getUserEmail());
-                break;
-
-            case "5":
-                userDetails = myUserDetailService
-                        .loadUserByUsername("5"+authenticationRequest.getUserEmail());
-                break;
-
-             default:
-                 throw new Exception("Incorrect appId");
-        }
+        UserDetails userDetails = myUserDetailService
+                        .loadUserByUsername(authenticationRequest.getUserEmail());
 
         final String jwt = jwtTokenUtil.generateToken(userDetails);
         Origin origin=originServiceImpl.getByUserEmailAndAppId(authenticationRequest.getUserEmail(),authenticationRequest.getAppId());
@@ -121,7 +92,10 @@ public class AuthenticationController {
         Set<String> deviceTokens=origin.getDeviceTokens();
         if(deviceTokens!=null)
         {
-           deviceTokens.add(authenticationRequest.getDeviceId());
+            if(!deviceTokens.contains(authenticationRequest.getDeviceId()))
+            {
+                deviceTokens.add(authenticationRequest.getDeviceId());
+            }
         }
         else
         {
@@ -143,16 +117,18 @@ public class AuthenticationController {
 
     public void sendTimeStamp(String userEmail,String status,String appId)
     {
-        LoginLogoutTimeStamp loginLogoutTimeStamp=new LoginLogoutTimeStamp();
         Long datetime = System.currentTimeMillis();
         Timestamp timestamp = new Timestamp(datetime);
-        loginLogoutTimeStamp.setTimestamp(timestamp);
-        loginLogoutTimeStamp.setStatus(status);
-        loginLogoutTimeStamp.setUserEmail(userEmail);
-        loginLogoutTimeStamp.setAppName(appsServiceImpl.getAddName(appId));
+
+        JSONObject jsonObject=new JSONObject();
+        jsonObject.put("timestamp",timestamp);
+        jsonObject.put("userEmail",userEmail);
+        jsonObject.put("appName",appsServiceImpl.getAddName(appId));
+        jsonObject.put("status",status);
 
         // TODO: 06/02/22 publish to queue
-        kafkaTemplate.send(topic,loginLogoutTimeStamp);
+        kafkaTemplate.send(topic,jsonObject);
+
         System.out.println("***************sent to loginlogouttimestamp*************");
 
     }
@@ -177,58 +153,66 @@ public class AuthenticationController {
     }
 
 
+    private boolean checkIfUserRegistered(String userEmail)
+    {
+        System.out.println(customerServiceImpl);
+        if(customerServiceImpl.findById(userEmail)!=null)
+        {
+            return true;
+        }
+        return false;
+
+    }
+
     @PostMapping(value = "/register" )
-    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) throws Exception {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest)  {
 
-        System.out.println("****************Register*****************");
         System.out.println(registerRequest);
-        Origin origin=originServiceImpl.getByUserEmailAndAppId(registerRequest.getUserEmail(),registerRequest.getAppId());
 
-        if(origin!=null)
+
+        if(checkIfUserRegistered((registerRequest.getUserEmail()))==true)
         {
-//            throw  new Exception("User already registered");
-            return ResponseEntity.ok(new RegisterResponse("failure"));
-        }
-        else
-        {
-            origin=new Origin();
+            return ResponseEntity.ok(new RegisterResponse("already registered"));
         }
 
-        BeanUtils.copyProperties(registerRequest,origin);
-        Customer customer=customerServiceImpl.getByUserEmail(registerRequest.getUserEmail());
+        String encryptedPassword ;
 
-        if(customer==null)
-        {
-            customer=new Customer();
-            BeanUtils.copyProperties(registerRequest,customer);
-            Set<String> appIds=new HashSet<>();
-            appIds.add(registerRequest.getAppId());
-            customer.setAppIds(appIds);
-            customerServiceImpl.updateOrSaveCustomer(customer);
+        try {
+            encryptedPassword = hashPassword(registerRequest.getPassword());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
-        else
+
+        for(int i=1;i<6;i++)
         {
-            Set<String> appIds=customer.getAppIds();
-            appIds.add(registerRequest.getAppId());
-            customer.setAppIds(appIds);
+            Origin origin=new Origin();
+            BeanUtils.copyProperties(registerRequest,origin);
+            origin.setAppId(String.valueOf(i));
+            originServiceImpl.updateOrSaveOrigin(origin);
 
         }
-        if(registerRequest.getInterests()!=null)
-        {
-            updateInterest(new UpdateInterestRequest(registerRequest.getUserEmail(),registerRequest.getAppId(),registerRequest.getInterests()));
-        }
-        origin.setProfileUrl(registerRequest.getProfileUrl());
-        origin.setProfileType(registerRequest.getProfileType());
-
+        Customer customer=new Customer();
+        BeanUtils.copyProperties(registerRequest,customer);
+        customer.setAppIds(new HashSet<>(Arrays.asList("1", "2", "3","4","5")));
+        customer.setInterests(registerRequest.getInterests());
         customerServiceImpl.updateOrSaveCustomer(customer);
-        originServiceImpl.updateOrSaveOrigin(origin);
+
         return ResponseEntity.ok(new RegisterResponse("success"));
     }
 
 
     @PostMapping(value = "/interest" )
     public void updateInterest(@RequestBody UpdateInterestRequest updateInterestRequest) throws Exception {
+        System.out.println(updateInterestRequest);
+
+
         Customer customer=customerServiceImpl.getByUserEmail(updateInterestRequest.getUserEmail());
+        if(customer==null)
+        {
+            System.out.println("User don't exists");
+            return;
+        }
+
 
 
         Set<String> updatedInterests=updateInterestRequest.getInterests();
@@ -304,4 +288,29 @@ public class AuthenticationController {
         return userProfileResponse;
     }
 
+
+
+    @PostMapping("/deviceids")
+    public List<String> getDeviceIds(@RequestBody DeviceIdsRequest deviceIdsRequest)
+    {
+        System.out.println("getDeviceId request comming----------");
+        return originServiceImpl.findAllByUserEmailAndDeviceId(deviceIdsRequest);
+
+    }
+
+    @PostMapping("/getdeviceids")
+    public List<String> getDeviceIdsFromEmails(@RequestBody DeviceIdsRequest deviceIdsRequest)
+    {
+        System.out.println("getDeviceId request comming----------");
+        System.out.println(deviceIdsRequest);
+        return originServiceImpl.findAllByUserEmailAndDeviceId(deviceIdsRequest);
+    }
+
+    private String hashPassword(String password) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(password.getBytes());
+        byte[] digest = md.digest();
+        String hash = DatatypeConverter.printHexBinary(digest).toUpperCase();
+        return hash;
+    }
 }

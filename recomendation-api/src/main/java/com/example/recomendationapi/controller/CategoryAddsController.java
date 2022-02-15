@@ -12,6 +12,7 @@ import java.util.List;
 @RequestMapping("/adds")
 public class CategoryAddsController {
 
+
     @Autowired
     private CategoryAddsServiceImpl categoryAddsServiceImpl;
 

@@ -3,13 +3,15 @@ package com.example.authenticationapi.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+import java.util.Set;
+
 @Document
 public class Apps {
 
     @Id
     private String appId;
     private String appName;
-
     public String getAppId() {
         return appId;
     }
@@ -34,3 +36,6 @@ public class Apps {
                 '}';
     }
 }
+
+
+

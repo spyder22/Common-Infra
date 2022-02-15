@@ -6,6 +6,7 @@ import com.example.recomendationapi.entity.CategoryAdds;
 import com.example.recomendationapi.payloads.request.OrganizationPost;
 import com.example.recomendationapi.payloads.response.UserAdUrl;
 import com.example.recomendationapi.service.RecommendationService;
+import org.bson.json.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -92,6 +93,37 @@ public class RecommendationServiceImpl implements RecommendationService {
         return userAdUrl;
     }
 
+    private void getPopularCategoryFromAnalytics(String userEmail)
+    {
+        HashMap<String,Long> categoryCount=restTemplate.exchange("http://10.177.1.156:8085/posts/crmdata/"+userEmail,HttpMethod.POST,null,HashMap.class).getBody();
+        System.out.println(categoryCount+ "response from analytics");
+        HashMap<String, Long> sortedCategoryCount=sortByValue(categoryCount);
+
+
+    }
+
+    private static HashMap<String, Long> sortByValue(HashMap<String, Long> hm)
+    {
+        // Create a list from elements of HashMap
+        List<Map.Entry<String, Long> > list =
+                new LinkedList<Map.Entry<String, Long> >(hm.entrySet());
+
+        // Sort the list
+        Collections.sort(list, new Comparator<Map.Entry<String, Long> >() {
+            public int compare(Map.Entry<String, Long> o1,
+                               Map.Entry<String, Long> o2)
+            {
+                return (o2.getValue()).compareTo(o1.getValue());
+            }
+        });
+
+        // put data from sorted list to hashmap
+        HashMap<String, Long> temp = new LinkedHashMap<String, Long>();
+        for (Map.Entry<String, Long> aa : list) {
+            temp.put(aa.getKey(), aa.getValue());
+        }
+        return temp;
+    }
 
 
 
@@ -104,6 +136,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         categoryAdds.setCategoryId(organizationPost.getCategoryId());
         categoryAdds.setUrl(organizationPost.getUrl());
         categoryAddsServiceImpl.addAd(categoryAdds);
+
+
 
         kafkaTemplate.send(topic,organizationPost);
 

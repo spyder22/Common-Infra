@@ -13,16 +13,8 @@ public class RegisterRequest {
     private Boolean isAdmin;  //-> only for quizapps
 
     private Set<String> interests;
-    private String profileType;
     private String profileUrl;
 
-    public String getProfileType() {
-        return profileType;
-    }
-
-    public void setProfileType(String profileType) {
-        this.profileType = profileType;
-    }
 
     public Set<String> getInterests() {
         return interests;
@@ -98,7 +90,7 @@ public class RegisterRequest {
                 ", appId='" + appId + '\'' +
                 ", isAdmin=" + isAdmin +
                 ", interests=" + interests +
-                ", profileType='" + profileType + '\'' +
+                '\'' +
                 ", profileUrl='" + profileUrl + '\'' +
                 '}';
     }

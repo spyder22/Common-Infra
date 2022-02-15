@@ -12,11 +12,10 @@ public class Origin {
     @Id
     private String originId;
     private String userEmail;
-    private String password;
+//    private String password;
     private String appId;
     private Set<String> deviceTokens;
     private String profileUrl;
-    private String profileType;
     private String token;
     private Boolean isAdmin;  // -> only for quiz apps
 
@@ -28,13 +27,6 @@ public class Origin {
         this.profileUrl = profileUrl;
     }
 
-    public String getProfileType() {
-        return profileType;
-    }
-
-    public void setProfileType(String profileType) {
-        this.profileType = profileType;
-    }
 
     public String getOriginId() {
         return originId;
@@ -51,14 +43,14 @@ public class Origin {
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
     }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+//
+//    public String getPassword() {
+//        return password;
+//    }
+//
+//    public void setPassword(String password) {
+//        this.password = password;
+//    }
 
     public String getAppId() {
         return appId;
